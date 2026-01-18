@@ -23,3 +23,9 @@ It's easy to run! Here are some examples, and you can customize the model settin
 python -u train.py --data PEMS08 > PEMS08.log &
 ```
 
+## 🚀 Getting Started
+
+### Prerequisites
+- Python 3.x
+- PyTorch
+- NumPy, Pandas, Scikit-learn
