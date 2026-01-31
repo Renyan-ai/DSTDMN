@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import math
-from .embedding import TemporalEmbedding, DynamicTemporalEmbedding
+from embedding import TemporalEmbedding, DynamicTemporalEmbedding
 
 class LayerNorm(nn.Module):
     def __init__(self, normalized_shape, eps=1e-5, elementwise_affine=True):
