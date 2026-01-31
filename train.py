@@ -6,7 +6,7 @@ from util import *
 import random
 from model import DSTDMN
 from ranger import Ranger
-from logger_manager import setup_logger
+from logger import setup_logger
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 import os
 import torch
@@ -17,7 +17,7 @@ import sys
 # -------------------------------
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--device", type=str, default="cuda:1", help="")
+parser.add_argument("--device", type=str, default="cuda:0", help="")
 parser.add_argument("--data", type=str, default="PEMS07", help="data path")
 parser.add_argument("--input_dim", type=int, default=3, help="input_dim")
 parser.add_argument("--channels", type=int, default=128, help="number of nodes")
