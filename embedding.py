@@ -24,13 +24,13 @@ class DynamicTemporalEmbedding(nn.Module):
         day_index = x[..., 1].long()   # [B, T, N]
         week_index = x[..., 2].long()  # [B, T, N]
 
-        # 取嵌入 [B, T, N, F]
+        # [B, T, N, F]
         day_emb = self.time_day_emb[day_index]
         week_emb = self.time_week_emb[week_index]
 
         tem_emb = day_emb + week_emb  # [B, T, N, F]
 
-        # 调整维度为 [B, F, N, T] 以匹配后续模块
+        # [B, F, N, T] 
         tem_emb = tem_emb.permute(0, 3, 2, 1)
 
         return tem_emb
