@@ -1,13 +1,3 @@
-"""
-自动化日志文件管理系统
-功能：
-- 日志分级（DEBUG, INFO, WARNING, ERROR）
-- 自动日志轮转（按大小和时间）
-- 训练指标独立记录
-- 自动归档和清理过期日志
-- 结构化输出（控制台+文件）
-"""
-
 import logging
 import os
 import sys
