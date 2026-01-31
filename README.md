@@ -1,10 +1,10 @@
-# DSTDMN
+<img width="1687" height="487" alt="image" src="https://github.com/user-attachments/assets/1fc1d37c-2faf-4aae-b78c-301fccafe5ff" /># DSTDMN
 This is the pytorch implementation of DSTDMN. I hope these codes are helpful to you!
 
 The architecture of the **Dynamic Spatio-Temporal Decoupling and Memory-Augmented Network (DSTDMN)** is illustrated below:
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/a425559f-eee5-4a0c-ae06-ad76f4172bad" alt="DSTDMN Framework" width="100%">
+  <img width="1687" height="487" alt="image" src="https://github.com/user-attachments/assets/1a118eb6-0996-4e64-acec-beb836c903ef" />
   <br>
   <em>Figure: Overview of the DSTDMN Framework.</em>
 </p>
