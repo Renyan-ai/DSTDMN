@@ -186,7 +186,7 @@ class MemoryTemporalBlock(nn.Module):
         self.d_k = d_model // head
         self.seq_length = seq_length
         self.M_long = M_long
-        self.causal = causal  # 新增：控制是否使用因果遮罩
+        self.causal = causal  
 
         # === QKV ===
         self.W_q = nn.Linear(d_model, d_model)
@@ -213,22 +213,16 @@ class MemoryTemporalBlock(nn.Module):
         H, d_k = self.head, self.d_k
 
         # [B, N, T, D] -> [B, N, T, H, dk] -> [B, H, N, T, dk]
-        # 这里的 view 和 permute 是低成本操作
         Q = self.W_q(x).view(B, N, T, H, d_k).permute(0, 3, 1, 2, 4)
         K = self.W_k(x).view(B, N, T, H, d_k).permute(0, 3, 1, 2, 4)
         V = self.W_v(x).view(B, N, T, H, d_k).permute(0, 3, 1, 2, 4)
 
         # ==========================================
         # 1. Self-Attention (Time)
-        # ==========================================
-        # [B,H,N,T,dk] @ [B,H,N,dk,T] -> [B,H,N,T,T]
         attn_time = torch.matmul(Q, K.transpose(-1, -2)) / math.sqrt(d_k)
 
-        # 关键修复：添加 Causal Mask (Masked Multi-Head Attention)
         if self.causal:
-            # 生成上三角掩码 (Upper Triangular Mask)
             mask = torch.triu(torch.ones(T, T, device=self.device), diagonal=1).bool()
-            # 将 mask 为 True 的位置填充为 -inf
             attn_time.masked_fill_(mask, -1e9)
 
         attn_time = F.softmax(attn_time, dim=-1)
@@ -236,16 +230,7 @@ class MemoryTemporalBlock(nn.Module):
 
         # ==========================================
         # 2. Memory Attention (Global Static)
-        # ==========================================
-        # 优化：避免 expand，使用 Einsum 或广播
-        # Q: [B, H, N, T, dk]
-        # Mem_K: [H, M, dk] -> need to align dimensions
-
-        # 方案：先将 Q 变换为 [B*N, H, T, dk] 以匹配 broadcast
-        # 或者直接利用广播:
-        # Q:       [B, H, N, T, dk]
-        # Mem_K_t: [1, H, 1, dk, M] (调整形状以广播)
-
+ 
         mem_k_t = self.long_memory_k.transpose(-1, -2).unsqueeze(0).unsqueeze(
             2)  # [1, H, 1, dk, M]
 
@@ -256,7 +241,7 @@ class MemoryTemporalBlock(nn.Module):
         # Mem_V: [1, H, 1, M, dk]
         mem_v = self.long_memory_v.unsqueeze(0).unsqueeze(2)
 
-        # [B, H, N, T, M] @ [1, H, 1, M, dk] -> [B, H, N, T, dk]
+      
         out_long = torch.matmul(attn_long, mem_v)
 
         # ==========================================
@@ -267,8 +252,7 @@ class MemoryTemporalBlock(nn.Module):
 
         out = out.permute(0, 2, 3, 1, 4).contiguous().view(B, N, T, D)
 
-        # 这里的 norm 位置取决于你喜欢 Pre-Norm 还是 Post-Norm
-        # 原代码是 Post-Norm (ResNet style)
+       
         out = self.fc(out)
         out = self.dropout(out)
         out = self.norm(out + x)
@@ -303,17 +287,17 @@ class TemEncoder(nn.Module):
         x = self.attention(input)  # [B, N, T, D]
         x = x + input  # [B, N, T, D]
 
-        # 调整维度以适应LayerNorm和GLU
+        
         x = x.permute(0, 3, 1, 2)  # [B, N, T, D] -> [B, D, N, T]
 
-        # 使用已有的LayerNorm（不是TemporalLayerNorm）
-        x = self.LayerNorm(x)  # 使用self.LayerNorm
+        
+        x = self.LayerNorm(x)  
         x = self.dropout1(x)
         x = self.glu(x) + x
-        x = self.LayerNorm(x)  # 使用self.LayerNorm
+        x = self.LayerNorm(x)  
         x = self.dropout2(x)
 
-        # 变换回原始维度
+     
         x = x.permute(0, 2, 3, 1)  # [B, D, N, T] -> [B, N, T, D]
 
         return x
@@ -419,7 +403,6 @@ class DSTDMN(nn.Module):
         data_st = self.SpatialBlock(data_st) + self.fc_st(data_st)# [B, 128, N, 1]
         data_st = self.regression_layer(data_st)  # [B, output_len, N, 1]
 
-        # 添加时间注意力
         temporal_input = data_tt.permute(0, 2, 3, 1)  # [B, N, T, D]
         temporal_out = self.TemporalBlock(temporal_input)
         temporal_out = temporal_out.permute(0, 3, 1, 2)  # [B, D, N, T]
