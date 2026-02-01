@@ -33,7 +33,7 @@ class ChannelLayerNorm(nn.Module):
 
     def forward(self, x):
     # x: [B, C, N, T]
-        mean = x.mean(dim=1, keepdim=True) # 只对 C 做归一化
+        mean = x.mean(dim=1, keepdim=True) 
         var = x.var(dim=1, keepdim=True, unbiased=False)
         x_norm = (x - mean) / torch.sqrt(var + self.eps)
         return x_norm * self.gamma + self.beta
