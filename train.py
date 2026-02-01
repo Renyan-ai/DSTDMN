@@ -163,14 +163,12 @@ def main():
 
     data = args.data
 
-    # 生成实验名称（数据集名称 + 时间戳）
     if args.experiment_name is None:
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         experiment_name = f"{data}_{timestamp}"
     else:
         experiment_name = args.experiment_name
 
-    # 初始化日志管理器
     logger_mgr = setup_logger(
         log_dir=args.save,
         experiment_name=experiment_name,
@@ -180,34 +178,18 @@ def main():
 
     logger = logger_mgr.logger
 
-    # 定义全局变量，用于信号处理函数访问和修改 (注意：在Python 3中，信号处理器内部可以直接访问外部作用域的变量，但为了清晰，我们在这里定义它们)
     global current_epoch, loss, test_log, epochs_since_best_mae, engine, scheduler, checkpoint_path
 
-    # 训练状态初始化（将在加载检查点后更新）
     start_epoch = 1
-    loss = 9999999  # 对应 best_valid_loss
-    test_log = 999999  # 对应 best_test_mae
+    loss = 9999999  
+    test_log = 999999  
     epochs_since_best_mae = 0
-    bestid = 0  # 记录最佳模型的 epoch
+    bestid = 0  
     current_epoch = start_epoch
 
     name = args.data
 
-    if args.data == "PEMS08":
-        args.data = "data/" + args.data
-        args.num_nodes = 170
-        args.num_nodes = 207
-    elif args.data == "PEMS08_60":
-        args.data = "data/" + args.data
-        args.num_nodes = 170
-        args.input_len = 60
-        args.output_len = 60
-    elif args.data == "PEMS04_60":
-        args.data = "data/" + args.data
-        args.num_nodes = 307
-        args.input_len = 60
-        args.output_len = 60
-    elif args.data == "PEMS03":
+    if args.data == "PEMS03":
         args.data = "data/" + args.data
         args.num_nodes = 358
         args.epochs = 2000
@@ -218,11 +200,14 @@ def main():
     elif args.data == "PEMS07":
         args.data = "data/PEMS07"
         args.num_nodes = 883
+    elif args.data == "PEMS08":
+        args.data = "data/" + args.data
+        args.num_nodes = 170
+        args.num_nodes = 207
 
 
     device = torch.device(args.device)
 
-    # 保存实验配置
     logger_mgr.save_config(args)
     logger.info(f"实验配置: {vars(args)}")
 
@@ -232,11 +217,10 @@ def main():
         )
     scaler = dataloader["scaler"]
 
-    path = logger_mgr.get_model_save_path() + "/"  # 最佳模型保存路径
+    path = logger_mgr.get_model_save_path() + "/"  
     checkpoint_path = os.path.join(logger_mgr.get_experiment_dir(),
-                                   "checkpoint.pth")  # 检查点路径
+                                   "checkpoint.pth")  
 
-    # 初始化训练器
     engine = trainer(
         scaler,
         args.input_dim,
@@ -249,18 +233,17 @@ def main():
         args.weight_decay,
         device,
     )
-    # 初始化学习率调度器
+
     scheduler = ReduceLROnPlateau(
         engine.optimizer,
-        mode='min',  # 监控指标是越小越好
-        factor=0.5,  # 降低学习率的倍数 (每次减少 50%)
-        patience=60,  # 连续 60 个 Epoch 验证损失不下降则触发
+        mode='min',  
+        factor=0.5,  
+        patience=60,  
         verbose=True,
-        min_lr=1e-6  # 最低学习率限制
+        min_lr=1e-6  
     )
 
-    # --- 检查点加载逻辑 ---
-    # --- 检查点加载逻辑 (已修正) ---
+
     load_success, start_epoch_loaded, loss_loaded, test_log_loaded, epochs_since_best_mae_loaded = engine.load_checkpoint(
         checkpoint_path, logger)
     if load_success:
@@ -275,11 +258,11 @@ def main():
         except Exception as e:
             logger.warning(f"未能加载学习率调度器状态: {e}")
 
-    current_epoch = start_epoch  # 关键：循环开始前设置
+    current_epoch = start_epoch  
 
-    # --- 信号处理函数 ---
+
     def signal_handler(sig, frame):
-        logger.warning("🚨 收到中断信号 (Ctrl+C)。正在保存检查点...")
+        logger.warning("收到中断信号。正在保存检查点")
         save_checkpoint(
             current_epoch,
             engine.model,
@@ -298,9 +281,7 @@ def main():
     signal.signal(signal.SIGINT, signal_handler)
     logger.info(f"已设置 Ctrl+C (SIGINT) 信号处理。检查点路径: {checkpoint_path}")
 
-    # -------------------
 
-    # 记录模型信息
     logger_mgr.log_model_info(str(engine.model))
 
     logger.info("开始训练...")
@@ -311,9 +292,9 @@ def main():
     result = []
     test_result = []
 
-    # 训练循环从 start_epoch 开始
+
     for epoch in range(start_epoch, args.epochs + 1):
-        current_epoch = epoch  # 更新全局变量
+        current_epoch = epoch  
         should_save_checkpoint = False
         logger_mgr.log_epoch_start(epoch, args.epochs)
 
@@ -330,7 +311,6 @@ def main():
             trainx = trainx.transpose(1, 3)
             trainy = torch.Tensor(y).to(device)
             trainy = trainy.transpose(1, 3)
-            # trainy[:, 0, :, :] 仅取第一个特征
             metrics = engine.train(trainx, trainy[:, 0, :, :])
             train_loss.append(metrics[0])
             train_mape.append(metrics[1])
@@ -387,7 +367,6 @@ def main():
         train_m = pd.Series(train_m)
         result.append(train_m)
 
-        # 记录epoch结束指标
         logger_mgr.log_epoch_end(
             epoch,
             {
@@ -417,7 +396,6 @@ def main():
                 should_save_checkpoint = True
 
             elif epoch > 100:
-                # === 测试集评估逻辑 (不变) ===
                 outputs = []
                 realy = torch.Tensor(dataloader["y_test"]).to(device)
                 realy = realy.transpose(1, 3)[:, 0, :, :]
@@ -437,7 +415,6 @@ def main():
                 awmape = []
                 armse = []
 
-                # 计算逐 horizon MAE
                 for j in range(args.output_len):
                     pred = scaler.inverse_transform(yhat[:, :, j])
                     real = realy[:, :, j]
@@ -461,12 +438,11 @@ def main():
                     bestid = epoch
                     logger.info(f"epoch: {epoch}")
 
-                    # 记录逐 horizon 指标
                     for j in range(args.output_len):
                         logger.info(
                             f"Evaluate best model on test data for horizon {j + 1}, Test MAE: {amae[j]:.4f}, Test RMSE: {armse[j]:.4f}, Test MAPE: {amape[j]:.4f}, Test WMAPE: {awmape[j]:.4f}"
                         )
-                    should_save_checkpoint = True  # <--- 标记保存检查点
+                    should_save_checkpoint = True 
                 else:
                     epochs_since_best_mae += 1
                     logger.info("No update in Test MAE")
@@ -475,7 +451,6 @@ def main():
             epochs_since_best_mae += 1
             logger.info("No update in Valid Loss")
 
-        # === 统一检查点保存逻辑 (实现您的要求) ===
         if should_save_checkpoint:
             save_checkpoint(
                 current_epoch,
@@ -490,8 +465,6 @@ def main():
             )
 
 
-        # === 200周期后每5个周期测试 ===
-        # 原有逻辑：如果不是最佳模型，但满足 i >= 50 和 i % 5 == 0，执行一次测试集评估并记录
         if epoch >= 50 and epoch % 5 == 0 and not (mvalid_loss < loss and epoch > 100):
             outputs = []
             realy = torch.Tensor(dataloader["y_test"]).to(device)
@@ -518,7 +491,6 @@ def main():
             logger.info(
                 f"Epoch {epoch} - Average Test MAE over {args.output_len} horizons: {avg_test_mae:.4f}")
 
-        # 同步保存逐epoch指标快照
         train_csv = pd.DataFrame(result)
         train_csv.round(8).to_csv(
             f"{logger_mgr.get_experiment_dir()}/metrics/train.csv"
@@ -534,12 +506,10 @@ def main():
     # test
     logger.info("Training ends")
     logger.info("The epoch of the best result：%s" % bestid)
-    # his_loss 列表可能在加载检查点时有历史数据丢失，这里最好使用恢复的 loss 变量
     logger.info(
         "The valid loss of the best model %s" % str(round(loss, 4))
     )
 
-    # ... (最终测试逻辑不变)
     engine.model.load_state_dict(torch.load(path + "best_model.pth"))
     outputs = []
     realy = torch.Tensor(dataloader["y_test"]).to(device)
@@ -597,7 +567,6 @@ def main():
     test_m = pd.Series(test_m)
     test_result.append(test_m)
 
-    # 输出测试结果至日志系统与CSV
     horizon_metrics = []
     for idx in range(len(amae)):
         horizon_metrics.append({
@@ -624,5 +593,4 @@ if __name__ == "__main__":
     t1 = time.time()
     main()
     t2 = time.time()
-    # 程序总耗时记录
     print("Total time spent: {:.4f}".format(t2 - t1))
