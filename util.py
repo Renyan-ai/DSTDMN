@@ -65,24 +65,6 @@ def load_dataset(dataset_dir, batch_size, valid_batch_size=None, test_batch_size
     for category in ["train", "val", "test"]:
         data["x_" + category][..., 0] = scaler.transform(data["x_" + category][..., 0])
 
-    # 对顺序出现的数据全局随机打乱
-    """
-    print("Perform shuffle on the dataset")
-    random_train = torch.arange(int(data["x_train"].shape[0]))
-    random_train = torch.randperm(random_train.size(0))
-    data["x_train"] = data["x_train"][random_train, ...]
-    data["y_train"] = data["y_train"][random_train, ...]
-
-    random_val = torch.arange(int(data["x_val"].shape[0]))
-    random_val = torch.randperm(random_val.size(0))
-    data["x_val"] = data["x_val"][random_val, ...]
-    data["y_val"] = data["y_val"][random_val, ...]
-    """
-
-    # random_test = torch.arange(int(data['x_test'].shape[0]))
-    # random_test = torch.randperm(random_test.size(0))
-    # data['x_test'] =  data['x_test'][random_test,...]
-    # data['y_test'] =  data['y_test'][random_test,...]
 
     outdata = {}
     outdata['y_test'] = data['y_test']
@@ -136,24 +118,8 @@ def get_dataloaders_from_index_data_MTS(
     x_train[..., 0] = scaler.transform(x_train[..., 0])
     x_val[..., 0] = scaler.transform(x_val[..., 0])
     x_test[..., 0] = scaler.transform(x_test[..., 0])
-    # 对顺序出现的数据全局随机打乱
-    """
-    print("Perform shuffle on the dataset")
-    random_train = torch.arange(int(x_train.shape[0]))
-    random_train = torch.randperm(random_train.size(0))
-    # raw_data["x_train"] = raw_data["x_train"][random_train, ...]
-    # raw_data["y_train"] = raw_data["y_train"][random_train, ...]
-    x_train = x_train[random_train,...]
-    y_train = y_train[random_train,...]
-
-    random_val = torch.arange(int(x_val.shape[0]))
-    random_val = torch.randperm(random_val.size(0))
-    # raw_data["x_val"] = raw_data["x_val"][random_val, ...]
-    # raw_data["y_val"] = raw_data["y_val"][random_val, ...]
-    x_val = x_val[random_val,...]
-    y_val = y_val[random_val,...]
-    """
-    # 构造 DataLoader
+    
+   
     data = {}
     # data["x_train"], data["y_train"] = x_train, y_train
     # data["x_val"], data["y_val"] = x_val, y_val
@@ -166,32 +132,6 @@ def get_dataloaders_from_index_data_MTS(
 
     return data
 
-
-    # # print_log(f"Trainset:\tx-{x_train.shape}\ty-{y_train.shape}", log=log)
-    # # print_log(f"Valset:  \tx-{x_val.shape}  \ty-{y_val.shape}", log=log)
-    # # print_log(f"Testset:\tx-{x_test.shape}\ty-{y_test.shape}", log=log)
-
-    # trainset = torch.utils.data.TensorDataset(
-    #     torch.FloatTensor(x_train), torch.FloatTensor(y_train)
-    # )
-    # valset = torch.utils.data.TensorDataset(
-    #     torch.FloatTensor(x_val), torch.FloatTensor(y_val)
-    # )
-    # testset = torch.utils.data.TensorDataset(
-    #     torch.FloatTensor(x_test), torch.FloatTensor(y_test)
-    # )
-
-    # trainset_loader = torch.utils.data.DataLoader(
-    #     trainset, batch_size=batch_size, shuffle=True
-    # )
-    # valset_loader = torch.utils.data.DataLoader(
-    #     valset, batch_size=batch_size, shuffle=False
-    # )
-    # testset_loader = torch.utils.data.DataLoader(
-    #     testset, batch_size=batch_size, shuffle=False
-    # )
-
-    # return trainset_loader, valset_loader, testset_loader, scaler
 
 def MAE_torch(pred, true, mask_value=None):
     if mask_value != None:
